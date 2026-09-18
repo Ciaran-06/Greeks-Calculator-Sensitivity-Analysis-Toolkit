@@ -32,5 +32,5 @@ print(f"\nTotal records: {len(df)}")
 print(f"Spot price: {spot_price}")
 print(df.head())
 
-df.to_csv(f'./data/cleaned/{ticker_symbol}_options_all_expiries.csv', index=False)
-print(f"\nSaved to {ticker_symbol}_options_all_expiries.csv")
+df.to_csv(f'./data/cleaned/{ticker_symbol}', index=False)
+print(f"\nSaved to {ticker_symbol}.csv")
