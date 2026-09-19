@@ -59,4 +59,5 @@ df['moneyness_bin'] = pd.cut(df['moneyness'], moneyness_boundaries, moneyness_la
 
 df.groupby('moneyness_bin')
 sensitivity_table = df.groupby('moneyness_bin')[['delta', 'vega', 'theta', 'gamma', 'rho']].agg(['mean', 'std'])
+sensitivity_table.columns = ['_'.join(col).strip() for col in sensitivity_table.columns.values]
 sensitivity_table.to_csv('./data/calculated/sensitivity_by_moneyness.csv')
