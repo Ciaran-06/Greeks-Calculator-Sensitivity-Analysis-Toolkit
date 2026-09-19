@@ -53,3 +53,10 @@ print(f"\nGreeks statistics:")
 print(df[['delta', 'vega', 'theta', 'rho', 'gamma']].describe())
 
 df['moneyness'] = df['strike'] / df['underlying_last']
+moneyness_boundaries = [0.8, 0.9, 1.0, 1.1, 1.2]
+moneyness_labels = ["0.80-0.90", "0.90-1.00", "1.00-1.10", "1.10-1.20"]
+df['moneyness_bin'] = pd.cut(df['moneyness'], moneyness_boundaries, moneyness_labels)
+
+df.groupby('moneyness_bin')
+df.groupby('moneyness_bin')[['delta', 'vega', 'theta', 'gamma', 'rho']].agg(['mean', 'std'])
+df.to_csv('./data/calculated/sensitivity_by_moneyness.csv')
