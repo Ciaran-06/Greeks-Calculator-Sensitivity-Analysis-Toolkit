@@ -1,5 +1,6 @@
 import pandas as pd
 import greeks as gr
+import numpy as np
 import sys
 
 if len(sys.argv) < 2:
@@ -12,17 +13,34 @@ df = pd.read_csv(f'./data/cleaned/{ticker_symbol}.csv')
 
 print(f"Loaded {len(df)} records for {ticker_symbol}")
 
-#calculate Black-Scholes-Merton
-df['d1'] = df.apply(lambda row: gr.calculate_d1(row['underlying_last'],row['strike'],row['r'],row['impliedVolatility'],row['T']), axis=1)
-df['d2'] = df.apply(lambda row: gr.calculate_d2(row['d1'],row['T'],row['impliedVolatility']), axis=1)
-df['bs'] = df.apply(lambda row: gr.calculate_bs(row['d1'],row['d2'],row['underlying_last'],row['strike'],row['r'],row['impliedVolatility'],row['T']),axis=1)
+#casting columuns into arrays to allow for vecotrisation and improve run-time
+spot_price = df['underlying_last'].values
+strike_price = df['strike'].values
+time_to_expiry = df['T'].values
+volatility = df['impliedVolatility'].values
+risk_free_rate = df['r'].values
 
-#calculating greeks
-df['delta'] = df.apply(lambda row: gr.calculate_delta(row['d1']), axis=1)
-df['vega'] = df.apply(lambda row: gr.calculate_vega(row['d1'],row['underlying_last'],row['T']), axis=1)
-df['theta'] = df.apply(lambda row: gr.calculate_theta(row['d1'],row['d2'],row['underlying_last'],row['strike'],row['r'],row['impliedVolatility'],row['T']), axis=1)
-df['rho'] = df.apply(lambda row: gr.calculate_rho(row['d2'],row['strike'],row['r'],row['T']), axis=1)
-df['gamma'] = df.apply(lambda row: gr.calculate_gamma(row['d1'],row['underlying_last'],row['impliedVolatility'],row['T']), axis=1)
+#calculate Black-Scholes-Merton
+d1_array = gr.calculate_d1(spot_price,strike_price,risk_free_rate,volatility,time_to_expiry)
+d2_array = gr.calculate_d2(d1_array,time_to_expiry,volatility)
+bs_array = gr.calculate_bs(d1_array,d2_array,spot_price,strike_price,risk_free_rate,volatility,time_to_expiry)
+
+#calculate greeks
+delta_array = gr.calculate_delta(d1_array)
+vega_array = gr.calculate_vega(d1_array,spot_price,time_to_expiry)
+theta_array = gr.calculate_theta(d1_array,d2_array,spot_price,strike_price,risk_free_rate,volatility,time_to_expiry)
+rho_array = gr.calculate_rho(d2_array,strike_price,risk_free_rate,time_to_expiry)
+gamma_array = gr.calculate_gamma(d1_array,spot_price,volatility,time_to_expiry)
+
+#putting results back into df
+df['d1'] = d1_array
+df['d2'] = d2_array
+df['bs'] = bs_array
+df['delta'] = delta_array
+df['vega'] = vega_array
+df['theta'] = theta_array
+df['rho'] = rho_array
+df['gamma'] = gamma_array
 
 # Save calculated Greeks
 df.to_csv(f'./data/calculated/{ticker_symbol}_greeks.csv', index=False)
