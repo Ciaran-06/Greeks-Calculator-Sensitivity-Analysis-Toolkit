@@ -1,6 +1,8 @@
 import pandas as pd
 import greeks as gr
 import numpy as np
+import scipy as sp
+import matplotlib.pyplot as plt
 import sys
 
 if len(sys.argv) < 2:
@@ -61,3 +63,15 @@ df.groupby('moneyness_bin')
 sensitivity_table = df.groupby('moneyness_bin')[['delta', 'vega', 'theta', 'gamma', 'rho']].agg(['mean', 'std'])
 sensitivity_table.columns = ['_'.join(col).strip() for col in sensitivity_table.columns.values]
 sensitivity_table.to_csv('./data/calculated/sensitivity_by_moneyness.csv')
+
+df.groupby('expiry')
+single_day_info = df[df['expiry'] == '2026-09-25']
+print(single_day_info)
+plt.plot(single_day_info['strike'], single_day_info['impliedVolatility'])
+plt.xlabel("Strike Price")
+plt.ylabel("Implied Volatility")
+plt.title("Volatility Smile")
+plt.show()
+
+vol_over_single_day = single_day_info['impliedVolatility']
+
