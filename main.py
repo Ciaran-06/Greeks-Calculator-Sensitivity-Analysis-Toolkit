@@ -71,17 +71,16 @@ plt.plot(single_day_info['strike'], single_day_info['impliedVolatility'])
 plt.xlabel("Strike Price")
 plt.ylabel("Implied Volatility")
 plt.title("Volatility Smile")
-plt.show()
+#plt.show()
 
 print(single_day_info)
 def cost_func(params):
     a,b,c = params
     predicted_vol = a * (single_day_info['moneyness'] ** 2) + b * single_day_info['moneyness'] + c
-    error = np.sum((predicted_vol - single_day_info['impliedVolatility']) ** 2)
-    
-    return error
+    np.sum((predicted_vol - single_day_info['impliedVolatility']) ** 2)
+    return np.sum((predicted_vol - single_day_info['impliedVolatility']) ** 2)
 
-print(sp.optimize.minimize(cost_func,[0,0,0]))#
+print(sp.optimize.minimize(cost_func,[0,0,0]))
 
 def test(a,b,c):
     predicted_vol = a * (single_day_info['moneyness'] ** 2) + b * single_day_info['moneyness'] + c
@@ -89,6 +88,17 @@ def test(a,b,c):
     plt.xlabel("Strike Price")
     plt.ylabel("Predicited Volatility")
     plt.title("Predicited Volatility Smile")
-    plt.show()
+    #plt.show()
 
 test(5.62,-14.04,8.61)
+
+sorted_day = single_day_info.sort_values('moneyness')
+vol_interpolater = sp.interpolate.CubicSpline(sorted_day['moneyness'], sorted_day['impliedVolatility'])
+
+moneyness = single_day_info.sort_values('moneyness').drop_duplicates('moneyness')
+
+print(moneyness[['moneyness', 'impliedVolatility']].iloc[:2])
+
+inbetween_known_values = (moneyness['moneyness'].iloc[0] + moneyness['moneyness'].iloc[1]) /2
+
+print(vol_interpolater(inbetween_known_values))
