@@ -73,5 +73,22 @@ plt.ylabel("Implied Volatility")
 plt.title("Volatility Smile")
 plt.show()
 
-vol_over_single_day = single_day_info['impliedVolatility']
+print(single_day_info)
+def cost_func(params):
+    a,b,c = params
+    predicted_vol = a * (single_day_info['moneyness'] ** 2) + b * single_day_info['moneyness'] + c
+    error = np.sum((predicted_vol - single_day_info['impliedVolatility']) ** 2)
+    
+    return error
 
+print(sp.optimize.minimize(cost_func,[0,0,0]))#
+
+def test(a,b,c):
+    predicted_vol = a * (single_day_info['moneyness'] ** 2) + b * single_day_info['moneyness'] + c
+    plt.plot(single_day_info['strike'], predicted_vol)
+    plt.xlabel("Strike Price")
+    plt.ylabel("Predicited Volatility")
+    plt.title("Predicited Volatility Smile")
+    plt.show()
+
+test(5.62,-14.04,8.61)
