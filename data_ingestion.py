@@ -32,5 +32,20 @@ print(f"\nTotal records: {len(df)}")
 print(f"Spot price: {spot_price}")
 print(df.head())
 
-df.to_csv(f'./data/cleaned/{ticker_symbol.upper()}', index=False)
-print(f"\nSaved to {ticker_symbol}.csv")
+df.to_csv(f'./data/uncleaned/{ticker_symbol.upper()}.csv', index=False)
+print(f"\nSaved uncleaned data to {ticker_symbol}.csv")
+
+print(df.columns)
+
+#for greeks we need rn we have
+#Index(['contractSymbol', 'lastTradeDate', 'strike', 'lastPrice', 'bid', 'ask',
+#       'change', 'percentChange', 'volume', 'openInterest',
+#       'impliedVolatility', 'inTheMoney', 'contractSize', 'currency', 'expiry',
+#       'underlying_last', 'quote_date'],
+#      dtype='object')
+# we need spot, strike, experation, vol, risk-free-rate
+
+columns_needed = ['lastPrice', 'strike', 'expiry', 'impliedVolatility', 'underlying_last']
+cleaneded_df = df[columns_needed]
+
+cleaneded_df.to_csv(f'./data/cleaned/{ticker_symbol.upper()}.csv', index=False)
