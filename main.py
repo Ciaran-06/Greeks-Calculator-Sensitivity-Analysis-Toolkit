@@ -58,5 +58,5 @@ moneyness_labels = ["0.80-0.90", "0.90-1.00", "1.00-1.10", "1.10-1.20"]
 df['moneyness_bin'] = pd.cut(df['moneyness'], moneyness_boundaries, moneyness_labels)
 
 df.groupby('moneyness_bin')
-df.groupby('moneyness_bin')[['delta', 'vega', 'theta', 'gamma', 'rho']].agg(['mean', 'std'])
-df.to_csv('./data/calculated/sensitivity_by_moneyness.csv')
+sensitivity_table = df.groupby('moneyness_bin')[['delta', 'vega', 'theta', 'gamma', 'rho']].agg(['mean', 'std'])
+sensitivity_table.to_csv('./data/calculated/sensitivity_by_moneyness.csv')
