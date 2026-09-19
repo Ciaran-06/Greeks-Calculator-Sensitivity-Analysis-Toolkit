@@ -10,4 +10,5 @@ ticker_symbol = sys.argv[1].upper()
 df = pd.read_csv(f'./data/cleaned/{ticker_symbol}.csv')
 
 print(f"Loaded {len(df)} records for {ticker_symbol}")
-print(df.head(10))
+
+    
