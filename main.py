@@ -33,3 +33,5 @@ print(f"\nGreeks summary (first 5 rows):")
 print(df[['delta', 'vega', 'theta', 'rho', 'gamma']].head())
 print(f"\nGreeks statistics:")
 print(df[['delta', 'vega', 'theta', 'rho', 'gamma']].describe())
+
+df['moneyness'] = df['strike'] / df['underlying_last']
