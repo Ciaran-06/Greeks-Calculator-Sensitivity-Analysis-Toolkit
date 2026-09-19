@@ -6,7 +6,7 @@ if len(sys.argv) < 2:
     print("Usage: python data_ingestion.py <ticker>")
     sys.exit(1)
 
-ticker_symbol = sys.argv[1]
+ticker_symbol = sys.argv[1].upper()
 ticker = yf.Ticker(ticker_symbol)
 
 print(f"Fetching {ticker_symbol} options data...")
