@@ -65,41 +65,30 @@ sensitivity_table = df.groupby('moneyness_bin')[['delta', 'vega', 'theta', 'gamm
 sensitivity_table.columns = ['_'.join(col).strip() for col in sensitivity_table.columns.values]
 sensitivity_table.to_csv('./data/calculated/sensitivity_by_moneyness.csv')
 
-df.groupby('expiry')
-single_day_info = df[(df['date'] == '2022-10-01') & (df['expiry'] == '2022-10-15')]
-print(single_day_info)
-plt.plot(single_day_info['strike'], single_day_info['impliedVolatility'])
-plt.xlabel("Strike Price")
-plt.ylabel("Implied Volatility")
-plt.title("Volatility Smile")
-#plt.show()
+def analyse_smile(df, date, expiry, label):
+    day = df[(df['date'] == date) & (df['expiry'] == expiry)].sort_values('moneyness')
+    if len(day) < 3:
+        print(f"{label}: too few points ({len(day)})")
+        return
+    def cost(params):
+        a, b, c = params
+        pred = a*day['moneyness']**2 + b*day['moneyness'] + c
+        return np.sum((pred - day['impliedVolatility'])**2)
+    result = sp.optimize.minimize(cost, [0,0,0])
+    print(f"{label} fit: {result.x}")
+    # plot / interpolate here using `day` and result.x
+    a, b, c = result.x
+    predicted = a*day['moneyness']**2 + b*day['moneyness'] + c
 
-print(single_day_info)
-def cost_func(params):
-    a,b,c = params
-    predicted_vol = a * (single_day_info['moneyness'] ** 2) + b * single_day_info['moneyness'] + c
-    np.sum((predicted_vol - single_day_info['impliedVolatility']) ** 2)
-    return np.sum((predicted_vol - single_day_info['impliedVolatility']) ** 2)
+    plt.scatter(day['strike'], day['impliedVolatility'], label=f'{label} actual', s=10)
+    plt.plot(day['strike'], predicted, label=f'{label} fit')
 
-print(sp.optimize.minimize(cost_func,[0,0,0]))
+    interp = sp.interpolate.CubicSpline(day['moneyness'], day['impliedVolatility'])
+    return result.x, interp
 
-def test(a,b,c):
-    predicted_vol = a * (single_day_info['moneyness'] ** 2) + b * single_day_info['moneyness'] + c
-    plt.plot(single_day_info['strike'], predicted_vol)
-    plt.xlabel("Strike Price")
-    plt.ylabel("Predicited Volatility")
-    plt.title("Predicited Volatility Smile")
-    #plt.show()
 
-test(5.62,-14.04,8.61)
-
-sorted_day = single_day_info.sort_values('moneyness')
-vol_interpolater = sp.interpolate.CubicSpline(sorted_day['moneyness'], sorted_day['impliedVolatility'])
-
-moneyness = single_day_info.sort_values('moneyness').drop_duplicates('moneyness')
-
-print(moneyness[['moneyness', 'impliedVolatility']].iloc[:2])
-
-inbetween_known_values = (moneyness['moneyness'].iloc[0] + moneyness['moneyness'].iloc[1]) /2
-
-print(vol_interpolater(inbetween_known_values))
+analyse_smile(df, '2022-10-03', '2022-10-21', 'High vol')
+analyse_smile(df, '2023-12-01', '2023-12-15', 'Low vol')
+plt.legend()
+plt.xlabel('Strike'); plt.ylabel('Implied Vol'); plt.title('Smile: high vs low vol regime')
+plt.show()
