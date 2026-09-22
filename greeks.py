@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 
+from scipy.optimize import brentq
 from scipy.stats import norm
 
 def calculate_d1(S,K,r,vol,T):
@@ -23,6 +24,16 @@ def calculate_rho(d2,K,r,T):
     return K * T* np.exp(-r*T)*norm.cdf(d2)
 def calculate_gamma(d1,S,vol,T):
     return (norm.pdf(d1)) / (S * vol * np.sqrt(T))
+
+def calculate_iv(S, K, T, r, market_price):
+    def objective(vol):
+        d1 = calculate_d1(S, K, r, vol, T)
+        d2 = calculate_d2(d1, T, vol)
+        return calculate_bs(d1, d2, S ,K, r, vol, T) - market_price
+    try:
+        return brentq(objective, 1e-6, 5.0)
+    except ValueError:
+        return np.nan
 
 if __name__ == "__main__":  
     S=100 
