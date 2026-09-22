@@ -1,8 +1,7 @@
 import pandas as pd
 import numpy as np 
 import seaborn as sea
-
-from tabulate import tabulate
+import greeks as gr
 
 import sys
 import os
@@ -38,6 +37,11 @@ df = df[df['type'] == 'C']
 #Arb Filter
 intrinsic = np.maximum(0, df['underlying_last'] - df['strike'] * np.exp(-df['r'] * df['T']))
 df = df[df['mid_price'] >= intrinsic]
+
+df['impliedVolatility'] = df.apply(
+    lambda row: gr.calculate_iv(row['underlying_last'], row['strike'], row['T'], row['r'], row['mid_price']),
+    axis=1
+)
 
 #moneyness column
 df['moneyness'] = df['strike'] / df['underlying_last']

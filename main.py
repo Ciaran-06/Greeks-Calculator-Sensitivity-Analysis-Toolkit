@@ -4,6 +4,7 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 import sys
+import os
 
 if len(sys.argv) < 2:
     print('Usage: python main.py <ticker>')
@@ -11,7 +12,7 @@ if len(sys.argv) < 2:
 
 ticker_symbol = sys.argv[1].upper()
 
-df = pd.read_csv(f'./data/cleaned/{ticker_symbol}.csv')
+df = pd.read_csv(f'./data/cleaned/{ticker_symbol}/{ticker_symbol}.csv')
 
 print(f"Loaded {len(df)} records for {ticker_symbol}")
 
@@ -45,8 +46,8 @@ df['rho'] = rho_array
 df['gamma'] = gamma_array
 
 # Save calculated Greeks
-df.to_csv(f'./data/calculated/{ticker_symbol}_greeks.csv', index=False)
-print(f"Saved Greeks to ./data/calculated/{ticker_symbol}_greeks.csv")
+os.makedirs(f'./data/calculated/{ticker_symbol}', exist_ok=True)
+df.to_csv(f'./data/calculated/{ticker_symbol}/{ticker_symbol}.csv', index=False)
 
 # Sensitivity check
 print(f"\nGreeks summary (first 5 rows):")
@@ -65,7 +66,7 @@ sensitivity_table.columns = ['_'.join(col).strip() for col in sensitivity_table.
 sensitivity_table.to_csv('./data/calculated/sensitivity_by_moneyness.csv')
 
 df.groupby('expiry')
-single_day_info = df[df['expiry'] == '2026-09-25']
+single_day_info = df[(df['date'] == '2022-10-01') & (df['expiry'] == '<2022-10-15>')]
 print(single_day_info)
 plt.plot(single_day_info['strike'], single_day_info['impliedVolatility'])
 plt.xlabel("Strike Price")
