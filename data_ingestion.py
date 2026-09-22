@@ -1,5 +1,6 @@
 import pandas as pd
 import databento as db
+import yfinance as yf
 
 from tabulate import tabulate
 
@@ -15,6 +16,17 @@ if len(sys.argv) < 2:
 
 print('Starting Data Ingestion...')
 ticker_symbol = sys.argv[1].upper()
+
+high_vol_irx = yf.Ticker("^IRX").history(start="2022-10-01", end="2022-10-31")['Close'] / 100
+low_vol_irx = yf.Ticker("^IRX").history(start="2023-12-01", end="2023-12-31")['Close'] / 100
+irx = pd.concat([high_vol_irx, low_vol_irx])
+
+high_vol_gspc = yf.Ticker("^GSPC").history(start="2022-10-01", end="2022-10-31")['Close']
+low_vol_gpsc = yf.Ticker("^GSPC").history(start="2023-12-01", end="2023-12-31")['Close'] 
+gspc = pd.concat([high_vol_gspc, low_vol_gpsc])
+
+irx.index = irx.index.tz_localize(None).normalize()
+gspc.index = gspc.index.tz_localize(None).normalize()
 
 #db.DBNStore.from_file(path).to_df()
 
@@ -40,6 +52,8 @@ df = pd.concat(data, ignore_index=True)
 #       'bid_pb_00', 'ask_pb_00', 'symbol', 'regime'],
 #      dtype='str') 
 df['date'] = df['ts_event'].dt.tz_localize(None).dt.normalize()
+df['r'] = df['date'].map(irx)
+df['underlying_last'] = df['date'].map(gspc)
 df['mid_price'] = (df['bid_px_00'] + df['ask_px_00']) / 2
 df['strike'] = (df['symbol'].str[-8:]).astype(float)/1000
 df['type'] = df['symbol'].str[-9]
