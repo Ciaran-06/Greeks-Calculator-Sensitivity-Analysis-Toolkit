@@ -66,7 +66,7 @@ sensitivity_table.columns = ['_'.join(col).strip() for col in sensitivity_table.
 sensitivity_table.to_csv('./data/calculated/sensitivity_by_moneyness.csv')
 
 df.groupby('expiry')
-single_day_info = df[(df['date'] == '2022-10-01') & (df['expiry'] == '<2022-10-15>')]
+single_day_info = df[(df['date'] == '2022-10-01') & (df['expiry'] == '2022-10-15')]
 print(single_day_info)
 plt.plot(single_day_info['strike'], single_day_info['impliedVolatility'])
 plt.xlabel("Strike Price")
