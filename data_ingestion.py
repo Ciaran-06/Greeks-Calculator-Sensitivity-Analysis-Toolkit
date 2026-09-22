@@ -1,80 +1,67 @@
-import yfinance as yf
 import pandas as pd
+import databento as db
+import yfinance as yf
+
+from tabulate import tabulate
+
 import sys
+import csv
+import os
+
+from pathlib import Path
 
 if len(sys.argv) < 2:
     print("Usage: python data_ingestion.py <ticker>")
     sys.exit(1)
 
+print('Starting Data Ingestion...')
 ticker_symbol = sys.argv[1].upper()
-ticker = yf.Ticker(ticker_symbol)
 
-#risk free rate
-irx = yf.Ticker("^IRX")
-r = irx.history(period="5d")['Close'].iloc[-1] / 100
+high_vol_irx = yf.Ticker("^IRX").history(start="2022-10-01", end="2022-10-31")['Close'] / 100
+low_vol_irx = yf.Ticker("^IRX").history(start="2023-12-01", end="2023-12-31")['Close'] / 100
+irx = pd.concat([high_vol_irx, low_vol_irx])
 
-print(f"Fetching {ticker_symbol} options data...")
+high_vol_gspc = yf.Ticker("^GSPC").history(start="2022-10-01", end="2022-10-31")['Close']
+low_vol_gpsc = yf.Ticker("^GSPC").history(start="2023-12-01", end="2023-12-31")['Close'] 
+gspc = pd.concat([high_vol_gspc, low_vol_gpsc])
 
-expirations = ticker.options
+irx.index = irx.index.tz_localize(None).normalize()
+gspc.index = gspc.index.tz_localize(None).normalize()
 
-all_calls = []
+#db.DBNStore.from_file(path).to_df()
 
-for exp_date in expirations:
-    chain = ticker.option_chain(date=exp_date)
-    calls = chain.calls.copy()
-    calls['expiry'] = exp_date
-    all_calls.append(calls)
-    print(f"Loaded {exp_date}: {len(calls)} contracts")
+ticker_symbol = sys.argv[1].upper()
+data = []     
+print('Iterating Through Files...')
+for regime in ['low_vol', 'high_vol']:
+    for file in os.listdir(f'./data/unproccesed/{ticker_symbol}/{regime}'):
+        filename = os.fsdecode(file)
+        print(f'Working on {filename}...')
+        if filename.endswith('dbn.zst'):
+            current_data = db.DBNStore.from_file(f'./data/unproccesed/{ticker_symbol}/{regime}/{filename}').to_df()
+            current_data['regime'] = regime
+            current_data = current_data.sort_values('ts_event')
+            current_data['date'] = current_data['ts_event'].dt.normalize() 
+            current_data = current_data.drop_duplicates(subset=['symbol', 'date'], keep='last')
+            data.append(current_data)
 
-df = pd.concat(all_calls, ignore_index=True)
-old_df_len = len(df)
+df = pd.concat(data, ignore_index=True)
 
-ticker_history = ticker.history(period='5d')
-last_day = ticker_history.index[-1].tz_localize(None)
+#Index(['ts_event', 'rtype', 'publisher_id', 'instrument_id', 'side', 'price',
+#       'size', 'flags', 'bid_px_00', 'ask_px_00', 'bid_sz_00', 'ask_sz_00',
+#       'bid_pb_00', 'ask_pb_00', 'symbol', 'regime'],
+#      dtype='str') 
+df['date'] = df['ts_event'].dt.tz_localize(None).dt.normalize()
+df['r'] = df['date'].map(irx)
+df['underlying_last'] = df['date'].map(gspc)
+df['mid_price'] = (df['bid_px_00'] + df['ask_px_00']) / 2
+df['strike'] = (df['symbol'].str[-8:]).astype(float)/1000
+df['type'] = df['symbol'].str[-9]
+df['expiry'] = df['symbol'].str[-15:-9]
+df['expiry'] = pd.to_datetime(df['expiry'], format='%y%m%d')
+df['T'] = (df['expiry'] - df['date']).dt.days / 365
+print(df.head(10))
+print(len(df))    
 
-df['underlying_last'] = ticker_history['Close'].iloc[-1]
-df['r'] = r
-df['quote_date'] = last_day
-
-df['mid_price'] = (df['bid'] + df['ask']) / 2
-
-df = df[df['bid'] > 0]
-bid_filter = len(df)
-print(f"{old_df_len - bid_filter} row diffrence from bid filter")
-
-df = df[df['impliedVolatility'] > 0.01]
-iv_filter = len(df)
-print(f'{bid_filter - iv_filter} row diffrence from iv filter')
-
-df['T'] = (pd.to_datetime(df['expiry']) - df['quote_date'].dt.normalize()).dt.days / 365
-df = df[df['T'] >= (7/365)]
-exp_filter = len(df)
-print(f'{iv_filter - exp_filter} row diffrence from experation filter')
-
-df = df[(df['strike']/df['underlying_last']).between(0.8,1.2)]
-far_filter = len(df)
-print(f'{exp_filter - far_filter} row diffrence from far from money filter')
-
-print(f'{old_df_len - len(df)} total row diffrence ')
-print(f"\nTotal records: {len(df)}")
-print(f"Spot price: {ticker_history['Close'].iloc[-1]}")
-print(df.head())
-
-df.to_csv(f'./data/uncleaned/{ticker_symbol.upper()}.csv', index=False)
-print(f"\nSaved uncleaned data to {ticker_symbol}.csv")
-
-print(df.columns)
-
-#for greeks we need rn we have
-#Index(['contractSymbol', 'lastTradeDate', 'strike', 'lastPrice', 'bid', 'ask',
-#       'change', 'percentChange', 'volume', 'openInterest',
-#       'impliedVolatility', 'inTheMoney', 'contractSize', 'currency', 'expiry',
-#       'underlying_last', 'quote_date'],
-#      dtype='object')
-# we need spot, strike, experation, vol, risk-free-rate
-
-columns_needed = ['lastPrice', 'strike', 'expiry', 'impliedVolatility', 'underlying_last','quote_date','T','r','mid_price']
-cleaneded_df = df[columns_needed]
-
-cleaneded_df.to_csv(f'./data/cleaned/{ticker_symbol.upper()}.csv', index=False)
-print(f"cleaned {ticker_symbol} data and saved to cleaned csv")
+os.makedirs(f'./data/uncleaned/{ticker_symbol}', exist_ok=True)
+df.to_csv(f'./data/uncleaned/{ticker_symbol}/{ticker_symbol}.csv', index=False)
